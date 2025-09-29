@@ -238,3 +238,13 @@ a {
 #bottom {
   padding-bottom: 120px;
 }
+
+#live-stats {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 14px;
+  pointer-events: none;
+}

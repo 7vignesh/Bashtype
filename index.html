@@ -4,27 +4,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>100xtyping</title>
+  <title>BashType</title>
   <link href="/public/favicon.ico" rel="icon" type="image/x-icon" />
   <link rel="stylesheet" href="style.css" />
 </head>
 
 <body onload="ExecuteWelcomeCommandOnLoad()" onloadstart="">
+  <div id="live-stats"></div>
   <div id="main-wrapper">
     <br />
 
     <div id="terminal-content">
-      <span id="term-orange">100xDev</span>@<span id="term-green">100xtyping.ayush.top</span><span
+      <span id="term-orange">BashType</span>@<span id="term-green">Bash.code</span><span
         id="welcome-onload-input">:~$</span>
       <span id="terminal-welcome-loading-text">Waiting for page to load...</span><br /><br />
     </div>
 
     <div id="terminal" class="invisible">
       <p id="path">
-        <span id="term-orange">100xDev</span>@<span id="term-green">100xtyping.ayush.top</span>:~$
+        <span id="term-orange">BashType</span>@<span id="term-green">Bash.code</span>:~$
       </p>
       <div id="cursor">
-        <input id="terminal-input" type="text" size="75" maxlength="75" autocomplete="off" spellcheck="false" autofocus
+        <input id="terminal-input" type="text" size="75" autocomplete="off" spellcheck="false" autofocus
           onblur="FocusInput()" disabled \ />
       </div>
     </div>

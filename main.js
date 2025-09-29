@@ -2,7 +2,7 @@ var input = document.getElementById("terminal-input");
 var content = document.getElementById("terminal-content");
 
 const o = "&nbsp;";
-const commandList = ["help", "welcome", "start", "reset", "stats", "clear"];
+const commandList = ["help", "welcome", "start", "reset", "stats", "clear", "config"];
 const helpCmds = [
   `<strong>------ ✨ Typing Test Commands ✨ ------</strong><br>`,
   `<span id='faint-glow-purple' class='term-purple'>help</span>     ${o}${o}${o}${o}${o}${o}${o}${o}   📜 Displays this message <br>`,
@@ -10,10 +10,11 @@ const helpCmds = [
   `<span id='faint-glow-purple' class='term-purple'>start</span>    ${o}${o}${o}${o}${o}${o}${o}       🚀 Start the typing test <br>`,
   `<span id='faint-glow-purple' class='term-purple'>reset</span>    ${o}${o}${o}${o}${o}${o}${o}       🔄 Reset the typing test <br>`,
   `<span id='faint-glow-purple' class='term-purple'>stats</span>    ${o}${o}${o}${o}${o}${o}${o}       📊 View typing test statistics <br>`,
+  `<span id='faint-glow-purple' class='term-purple'>config</span>   ${o}${o}${o}${o}${o}${o}           ⚙️  Configure test settings <br>`,
   `<span id='faint-glow-purple' class='term-purple'>clear</span>    ${o}${o}${o}${o}${o}${o}${o}       🧹 Clears the terminal <br>`,
 ];
 const welcomeMsg = [
-  `Welcome to <span id="term-green" class="faint-glow-green">100xtyping</span> <br>`,
+  `Welcome to <span id="term-green" class="faint-glow-green">BashType</span> <br>`,
   `Type <span id="term-green" class="faint-glow-green">'help'</span> for the list of available commands.<br>`,
 ];
 const resetMsg = [
@@ -23,6 +24,14 @@ let testStartTime, testEndTime;
 let isTesting = false;
 let testText = "";
 let typingTestResults = [];
+let currentTypedText = "";
+let liveStatsVisible = false;
+
+// Configuration options
+let config = {
+  wordCount: 10,
+  difficulty: 'medium', // 'easy', 'medium', 'hard'
+};
 
 async function fetchWords() {
   const response = await fetch("words.json");
@@ -30,17 +39,44 @@ async function fetchWords() {
   return words;
 }
 
-async function getRandomWords() {
+async function getRandomWords(wordCount = config.wordCount, difficulty = config.difficulty) {
   const words = await fetchWords();
-  const wordKeys = Object.keys(words);
-  let randomWords = [];
-  while (randomWords.length < 10) {
-    const randomIndex = Math.floor(Math.random() * wordKeys.length);
-    const randomWord = words[wordKeys[randomIndex]];
-    if (!randomWords.includes(randomWord)) {
-      randomWords.push(randomWord);
+  const allWords = Object.values(words);
+
+  let filteredWords = allWords;
+  switch (difficulty) {
+    case "easy":
+      filteredWords = allWords.filter((word) => word.length >= 3 && word.length <= 4);
+      break;
+    case "medium":
+      filteredWords = allWords.filter((word) => word.length >= 5 && word.length <= 7);
+      break;
+    case "hard":
+      filteredWords = allWords.filter((word) => word.length >= 8);
+      break;
+    default:
+      filteredWords = allWords;
+  }
+
+  if (filteredWords.length === 0) {
+    filteredWords = allWords;
+  }
+
+  if (filteredWords.length === 0) {
+    return "";
+  }
+
+  const randomWords = [];
+  if (wordCount <= filteredWords.length) {
+    const shuffled = [...filteredWords].sort(() => Math.random() - 0.5);
+    randomWords.push(...shuffled.slice(0, wordCount));
+  } else {
+    for (let i = 0; i < wordCount; i++) {
+      const randomIndex = Math.floor(Math.random() * filteredWords.length);
+      randomWords.push(filteredWords[randomIndex]);
     }
   }
+
   return randomWords.join(" ");
 }
 
@@ -55,6 +91,31 @@ function calculateAccuracy(expectedText, typedText) {
   }
 
   return (correctChars / totalChars) * 100;
+}
+
+function calculateLiveWPM(startTime, typedText) {
+  if (!startTime || typedText.length === 0) return 0;
+  const currentTime = new Date().getTime();
+  const timeDiff = (currentTime - startTime) / 1000 / 60; // in minutes
+  const wordsTyped = typedText.trim().split(/\s+/).length;
+  return wordsTyped / timeDiff;
+}
+
+function updateLiveStats() {
+  if (!isTesting || !liveStatsVisible) return;
+
+  const liveWPM = calculateLiveWPM(testStartTime, currentTypedText);
+  const liveAccuracy = calculateAccuracy(testText, currentTypedText);
+
+  const liveStatsElement = document.getElementById('live-stats');
+  if (liveStatsElement) {
+    liveStatsElement.innerHTML = `
+      <div style="position: fixed; top: 20px; right: 20px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 5px; font-size: 14px;">
+        <div>Live WPM: <span style="color: #00d8ff;">${liveWPM.toFixed(1)}</span></div>
+        <div>Accuracy: <span style="color: ${liveAccuracy >= 90 ? '#00ff00' : liveAccuracy >= 70 ? '#ffff00' : '#ff4444'};">${liveAccuracy.toFixed(1)}%</span></div>
+      </div>
+    `;
+  }
 }
 
 const terminal = {
@@ -119,6 +180,7 @@ const terminal = {
 };
 
 input.addEventListener("keydown", HandleCommands);
+input.addEventListener("input", HandleLiveTyping);
 
 function ScrollTo(direction) {
   if (direction === "top") {
@@ -160,18 +222,28 @@ async function HandleCommands(event) {
   if (event.key === "Enter") {
     const command = input.value.trim();
     input.value = "";
-    content.innerHTML += `<br><span id="term-orange">100xDev</span>@<span id="term-green">100xtyping.ayush.top</span>:~$ ${command} <br>`;
+    content.innerHTML += `<br><span id="term-orange">BashType</span>@<span id="term-green">Bash.codeX</span>:~$ ${command} <br>`;
     await ExecuteCommand(command);
   }
 }
 
+function HandleLiveTyping(event) {
+  if (isTesting) {
+    currentTypedText = input.value;
+    updateLiveStats();
+  }
+}
+
 async function ExecuteCommand(command) {
+  const commandParts = command.trim().split(/\s+/);
+  const baseCommand = commandParts[0].toLowerCase();
+
   if (
     isTesting &&
-    command !== "reset" &&
-    command !== "help" &&
-    command !== "clear" &&
-    command !== "stats"
+    baseCommand !== "reset" &&
+    baseCommand !== "help" &&
+    baseCommand !== "clear" &&
+    baseCommand !== "stats"
   ) {
     const typedText = command.trim();
     const accuracy = calculateAccuracy(testText, typedText);
@@ -193,6 +265,9 @@ async function ExecuteCommand(command) {
       );
       isTesting = false;
       testText = "";
+      liveStatsVisible = false;
+      const liveStatsElement = document.getElementById('live-stats');
+      if (liveStatsElement) liveStatsElement.innerHTML = '';
     } else {
       terminal.echo(
         [
@@ -209,7 +284,7 @@ async function ExecuteCommand(command) {
       }, 1000);
     }
   } else {
-    switch (command) {
+    switch (baseCommand) {
       case "help":
         terminal.echo(helpCmds, 10, false, true);
         break;
@@ -221,11 +296,14 @@ async function ExecuteCommand(command) {
           isTesting = true;
           testText = await getRandomWords();
           testStartTime = new Date().getTime();
+          currentTypedText = "";
+          liveStatsVisible = true;
           const startMsg = [
             `🚀 Starting the typing test...<br>`,
+            `Word Count: <span id="term-cyan">${config.wordCount}</span> | Difficulty: <span id="term-cyan">${config.difficulty}</span><br>`,
             `Type the following text as fast as you can:<br>`,
             `<span id="test-text">${testText}</span><br>`,
-            `Press Enter when you are done.`,
+            `Press Enter when you are done. Live stats will appear in the top-right corner.`,
           ];
           terminal.echo(startMsg, 25, false, true);
         } else {
@@ -240,35 +318,55 @@ async function ExecuteCommand(command) {
       case "reset":
         isTesting = false;
         testText = "";
+        currentTypedText = "";
+        liveStatsVisible = false;
+        const liveStatsElement = document.getElementById('live-stats');
+        if (liveStatsElement) liveStatsElement.innerHTML = '';
         terminal.echo(resetMsg, 25, false, true);
         break;
-      case "stats":
-        let totalWpm = 0;
-        typingTestResults.forEach((result) => {
-          totalWpm += result.wpm;
-        });
-        let averageWpm =
-          typingTestResults.length > 0
-            ? totalWpm / typingTestResults.length
-            : 0;
+      case "config": {
+        if (commandParts.length === 1) {
+          // Show current config
+          const configMsg = [
+            `⚙️  Current Configuration:<br>`,
+            `Word Count: <span id="term-cyan">${config.wordCount}</span><br>`,
+            `Difficulty: <span id="term-cyan">${config.difficulty}</span><br><br>`,
+            `📝 Usage: config [option] [value]<br>`,
+            `Examples:<br>`,
+            `  config wordcount 25<br>`,
+            `  config difficulty easy<br>`,
+            `  config difficulty medium<br>`,
+            `  config difficulty hard<br><br>`,
+            `Available options: wordcount (10-100), difficulty (easy|medium|hard)`,
+          ];
+          terminal.echo(configMsg, 15, false, true);
+        } else if (commandParts.length >= 3) {
+          const option = commandParts[1].toLowerCase();
+          const value = commandParts[2].toLowerCase();
 
-        const attemptsList = typingTestResults
-          .map(
-            (result, index) =>
-              `Attempt ${index + 1}: WPM: ${result.wpm.toFixed(2)}`
-          )
-          .join("<br>");
-
-        const statsMsg = [
-          `📊 Typing Test Statistics:<br>`,
-          `Attempts: ${typingTestResults.length}<br>`,
-          `Average Words per minute (WPM): <span id="wpm">${averageWpm.toFixed(
-            2
-          )}</span><br>`,
-          `All Attempts:<br>${attemptsList}`,
-        ];
-        terminal.echo(statsMsg, 25, false, true);
+          if (option === 'wordcount') {
+            const count = parseInt(value);
+            if (count >= 10 && count <= 100) {
+              config.wordCount = count;
+              terminal.echo([`✅ Word count set to ${count}`], 25, false, true);
+            } else {
+              terminal.echo([`❌ Word count must be between 10 and 100`], 25, false, true);
+            }
+          } else if (option === 'difficulty') {
+            if (['easy', 'medium', 'hard'].includes(value)) {
+              config.difficulty = value;
+              terminal.echo([`✅ Difficulty set to ${value}`], 25, false, true);
+            } else {
+              terminal.echo([`❌ Difficulty must be easy, medium, or hard`], 25, false, true);
+            }
+          } else {
+            terminal.echo([`❌ Unknown option: ${option}`], 25, false, true);
+          }
+        } else {
+          terminal.echo([`❌ Invalid config command. Use 'config' to see usage.`], 25, false, true);
+        }
         break;
+      }
       case "clear":
         content.innerHTML = "";
         break;
