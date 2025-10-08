@@ -82,23 +82,34 @@ async function getRandomWords(wordCount = config.wordCount, difficulty = config.
 
 function calculateAccuracy(expectedText, typedText) {
   let correctChars = 0;
-  let totalChars = Math.max(expectedText.length, typedText.length);
-
-  for (let i = 0; i < totalChars; i++) {
-    if (typedText[i] === expectedText[i]) {
+  const totalChars = Math.max(expectedText.length, typedText.length);
+  for (let i = 0; i < typedText.length; i++) {
+    if (i < expectedText.length && expectedText[i] === typedText[i]) {
       correctChars++;
     }
   }
+  return totalChars > 0 ? (correctChars / totalChars) * 100 : 100;
+}
 
-  return (correctChars / totalChars) * 100;
+function analyzeErrors(expectedText, typedText) {
+  const errors = {};
+  for (let i = 0; i < typedText.length; i++) {
+    if (expectedText[i] !== typedText[i]) {
+      const expectedChar = expectedText[i] || " ";
+      const typedChar = typedText[i];
+      const errorKey = `"${expectedChar}" as "${typedChar}"`;
+      errors[errorKey] = (errors[errorKey] || 0) + 1;
+    }
+  }
+  return errors;
 }
 
 function calculateLiveWPM(startTime, typedText) {
   if (!startTime || typedText.length === 0) return 0;
   const currentTime = new Date().getTime();
-  const timeDiff = (currentTime - startTime) / 1000 / 60; // in minutes
-  const wordsTyped = typedText.trim().split(/\s+/).length;
-  return wordsTyped / timeDiff;
+  const timeDiffMinutes = (currentTime - startTime) / 1000 / 60;
+  if (timeDiffMinutes === 0) return 0;
+  return (typedText.length / 5) / timeDiffMinutes;
 }
 
 function updateLiveStats() {
@@ -246,43 +257,42 @@ async function ExecuteCommand(command) {
     baseCommand !== "stats"
   ) {
     const typedText = command.trim();
+    testEndTime = new Date().getTime();
     const accuracy = calculateAccuracy(testText, typedText);
-    if (accuracy === 100) {
-      testEndTime = new Date().getTime();
-      let timeDiff = (testEndTime - testStartTime) / 1000; // in seconds
-      let wpm = (testText.split(" ").length / timeDiff) * 60;
-      typingTestResults.push({ wpm, accuracy });
-      terminal.echo(
-        [
-          `✅ Typing test completed. WPM: ${wpm.toFixed(
-            2
-          )}, Accuracy: ${accuracy.toFixed(2)}%<br>`,
-          `Do you want to continue? Press <span id="term-green">'y'</span> for another test or <span id="term-red">'n'</span> to stop.`,
-        ],
-        25,
-        false,
-        true
-      );
-      isTesting = false;
-      testText = "";
-      liveStatsVisible = false;
-      const liveStatsElement = document.getElementById('live-stats');
-      if (liveStatsElement) liveStatsElement.innerHTML = '';
-    } else {
-      terminal.echo(
-        [
-          `❌ Incorrect text. Accuracy: ${accuracy.toFixed(
-            2
-          )}%<br>Resetting test...`,
-        ],
-        25,
-        false,
-        true
-      );
-      setTimeout(() => {
-        ExecuteCommand("reset");
-      }, 1000);
+    const errors = analyzeErrors(testText, typedText);
+    let timeDiff = (testEndTime - testStartTime) / 1000; // in seconds
+    const timeDiffMinutes = timeDiff / 60;
+    let wpm = timeDiffMinutes > 0 ? (typedText.length / 5) / timeDiffMinutes : 0;
+    typingTestResults.push({ wpm, accuracy, errors });
+
+    let errorFeedback = "";
+    if (Object.keys(errors).length > 0) {
+      errorFeedback = "<br>Most common mistakes:<br>";
+      const sortedErrors = Object.entries(errors).sort((a, b) => b[1] - a[1]);
+      sortedErrors.forEach(([error, count]) => {
+        errorFeedback += `  - ${error}: ${count} time(s)<br>`;
+      });
     }
+
+    const resultMessage = [
+      `✅ Typing test completed. WPM: ${wpm.toFixed(
+        2
+      )}, Accuracy: ${accuracy.toFixed(2)}%`,
+      errorFeedback,
+      `<br>Do you want to continue? Press <span id="term-green">'y'</span> for another test or <span id="term-red">'n'</span> to stop.`,
+    ];
+
+    terminal.echo(
+      resultMessage,
+      25,
+      false,
+      true
+    );
+    isTesting = false;
+    testText = "";
+    liveStatsVisible = false;
+    const liveStatsElement = document.getElementById('live-stats');
+    if (liveStatsElement) liveStatsElement.innerHTML = '';
   } else {
     switch (baseCommand) {
       case "help":
