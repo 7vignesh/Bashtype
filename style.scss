@@ -1,13 +1,13 @@
 @font-face {
   font-family: "JetBrains Mono";
-  src: url("public/fonts/JetBrainsMono-Regular.woff2") format("woff2");
+  src: url("/fonts/JetBrainsMono-Regular.woff2") format("woff2");
   font-weight: normal;
   font-style: normal;
 }
 
 @font-face {
   font-family: "JetBrains Mono";
-  src: url("public/fonts/JetBrainsMono-Bold.woff2") format("woff2");
+  src: url("/fonts/JetBrainsMono-Bold.woff2") format("woff2");
   font-weight: bold;
   font-style: normal;
 }
@@ -15,7 +15,7 @@
 body {
   color: #e0e0e0;
   background-color: #121212;
-  font-family: "JetBrains Mono", monospace;
+  font-family: "JetBrains Mono", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", monospace;
   height: 100%;
   width: 100%;
   overflow-x: hidden;

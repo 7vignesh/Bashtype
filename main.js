@@ -298,6 +298,33 @@ async function ExecuteCommand(command) {
       case "help":
         terminal.echo(helpCmds, 10, false, true);
         break;
+      case "stats":
+        if (typingTestResults.length > 0) {
+          const statsMsg = [
+            `<strong>------ 📊 Typing Test Statistics 📊 ------</strong><br>`,
+          ];
+
+          // Calculate average WPM and Accuracy
+          const totalWPM = typingTestResults.reduce((acc, result) => acc + result.wpm, 0);
+          const avgWPM = totalWPM / typingTestResults.length;
+          const totalAcc = typingTestResults.reduce((acc, result) => acc + result.accuracy, 0);
+          const avgAcc = totalAcc / typingTestResults.length;
+
+          statsMsg.push(`Tests Completed: <span id="term-cyan">${typingTestResults.length}</span><br>`);
+          statsMsg.push(`Average WPM: <span id="term-green">${avgWPM.toFixed(2)}</span><br>`);
+          statsMsg.push(`Average Accuracy: <span id="term-green">${avgAcc.toFixed(2)}%</span><br><br>`);
+
+          statsMsg.push(`Last 5 Tests:<br>`);
+          const last5 = typingTestResults.slice(-5).reverse();
+          last5.forEach((result, i) => {
+            statsMsg.push(`  ${i + 1}. WPM: ${result.wpm.toFixed(2)} | Acc: ${result.accuracy.toFixed(2)}%<br>`);
+          });
+
+          terminal.echo(statsMsg, 25, false, true);
+        } else {
+          terminal.echo(["❌ No stats available. Complete a test first."], 25, false, true);
+        }
+        break;
       case "welcome":
         terminal.echo(welcomeMsg, 25, false, true);
         break;
