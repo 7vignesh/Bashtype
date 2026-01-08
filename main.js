@@ -46,13 +46,13 @@ async function getRandomWords(wordCount = config.wordCount, difficulty = config.
   let filteredWords = allWords;
   switch (difficulty) {
     case "easy":
-      filteredWords = allWords.filter((word) => word.length >= 3 && word.length <= 4);
+      filteredWords = allWords.filter((word) => word.length <= 4);
       break;
     case "medium":
-      filteredWords = allWords.filter((word) => word.length >= 5 && word.length <= 7);
+      filteredWords = allWords.filter((word) => word.length >= 5 && word.length <= 6);
       break;
     case "hard":
-      filteredWords = allWords.filter((word) => word.length >= 8);
+      filteredWords = allWords.filter((word) => word.length >= 7);
       break;
     default:
       filteredWords = allWords;
